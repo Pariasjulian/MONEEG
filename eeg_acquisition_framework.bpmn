@@ -1,0 +1,39 @@
+<?xml version="1.0" ?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <process id="Process_EEGAcquisition" isExecutable="false">
+    <laneSet id="LaneSet_1">
+      <lane id="Lane_Physical" name="Physical &amp; Analog Layer">
+        <flowNodeRef>StartEvent_1</flowNodeRef>
+        <flowNodeRef>Task_Impedance</flowNodeRef>
+        <flowNodeRef>Task_SNR</flowNodeRef>
+        <flowNodeRef>Task_SPI</flowNodeRef>
+      </lane>
+      <lane id="Lane_Hardware" name="Deterministic Hardware Layer">
+        <flowNodeRef>Task_Interrupt</flowNodeRef>
+        <flowNodeRef>Task_Sync</flowNodeRef>
+      </lane>
+      <lane id="Lane_Processing" name="Compute &amp; Processing Layer">
+        <flowNodeRef>Task_DSP</flowNodeRef>
+        <flowNodeRef>Task_Stream</flowNodeRef>
+        <flowNodeRef>EndEvent_1</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="StartEvent_1" name="Session Start"/>
+    <task id="Task_Impedance" name="Execute AC Impedance Measurement"/>
+    <task id="Task_SNR" name="Mitigate Hardware SNR Degradation (Active DRL)"/>
+    <task id="Task_SPI" name="Route Data via Independent SPI Buses"/>
+    <task id="Task_Interrupt" name="Trigger Hardware-Level ISR (Software/USB triggered)"/>
+    <task id="Task_Sync" name="Inject Event Marker for Temporal Synchronization"/>
+    <task id="Task_DSP" name="Execute DSP (IIR Filtering &amp; Referencing)"/>
+    <task id="Task_Stream" name="Format to XDF &amp; Stream Data"/>
+    <endEvent id="EndEvent_1" name="Session End"/>
+    <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Impedance"/>
+    <sequenceFlow id="Flow_2" sourceRef="Task_Impedance" targetRef="Task_SNR"/>
+    <sequenceFlow id="Flow_3" sourceRef="Task_SNR" targetRef="Task_SPI"/>
+    <sequenceFlow id="Flow_4" sourceRef="Task_SPI" targetRef="Task_Interrupt"/>
+    <sequenceFlow id="Flow_5" sourceRef="Task_Interrupt" targetRef="Task_Sync"/>
+    <sequenceFlow id="Flow_6" sourceRef="Task_Sync" targetRef="Task_DSP"/>
+    <sequenceFlow id="Flow_7" sourceRef="Task_DSP" targetRef="Task_Stream"/>
+    <sequenceFlow id="Flow_8" sourceRef="Task_Stream" targetRef="EndEvent_1"/>
+  </process>
+</definitions>
