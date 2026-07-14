@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MonEEG — 32-Channel EEG Acquisition System Documentation</title>
+  <meta name="description" content="Technical documentation for MonEEG, a real-time 32-channel EEG acquisition system built on TM4C1294 + ADS1299 with streaming visualization." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Mobile Toggle -->
+<button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<div class="layout">
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">M</div>
+        <h2>MonEEG</h2>
+      </div>
+      <div class="sidebar-version">Documentation v6.0</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">Getting Started</div>
+        <a class="nav-link active" data-section="overview">
+          <span class="nav-icon">◈</span> Overview
+        </a>
+        <a class="nav-link" data-section="architecture">
+          <span class="nav-icon">⬡</span> Architecture
+        </a>
+        <a class="nav-link" data-section="pipeline">
+          <span class="nav-icon">▸</span> Acquisition Pipeline
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Reference</div>
+        <a class="nav-link" data-section="modes">
+          <span class="nav-icon">⚡</span> Operational Modes
+        </a>
+        <a class="nav-link" data-section="data-format">
+          <span class="nav-icon">▦</span> Data Format
+        </a>
+        <a class="nav-link" data-section="data-path">
+          <span class="nav-icon">→</span> Data Path
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Software</div>
+        <a class="nav-link" data-section="firmware">
+          <span class="nav-icon">⚙</span> Firmware (TM4C)
+        </a>
+        <a class="nav-link" data-section="host-daemon">
+          <span class="nav-icon">⊞</span> Host Daemon (CM5)
+        </a>
+        <a class="nav-link" data-section="server">
+          <span class="nav-icon">⊕</span> Python Server
+        </a>
+        <a class="nav-link" data-section="api">
+          <span class="nav-icon">⟁</span> API Reference
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Project</div>
+        <a class="nav-link" data-section="structure">
+          <span class="nav-icon">⊟</span> File Structure
+        </a>
+        <a class="nav-link" data-section="quickstart">
+          <span class="nav-icon">▶</span> Quick Start
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+  <main class="main-content">
+
+    <!-- ── HERO ───────────────────────────── -->
+    <section class="hero">
+      <canvas class="hero-canvas" id="hero-canvas"></canvas>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge">Open-Source Research Platform</div>
+        <h1>
+          <span class="gradient-text">MonEEG</span><br />
+          32-Channel EEG System
+        </h1>
+        <p class="hero-description">
+          A real-time, research-grade electroencephalography acquisition platform built on a
+          TM4C1294 ARM Cortex-M4F microcontroller controlling four ADS1299 analog front-ends,
+          with streaming, digital filtering, and browser-based visualization.
+        </p>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-value">32</div>
+            <div class="hero-stat-label">Channels</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value">24-bit</div>
+            <div class="hero-stat-label">Resolution</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value">250</div>
+            <div class="hero-stat-label">SPS</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value">120</div>
+            <div class="hero-stat-label">MHz Clock</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value">4×</div>
+            <div class="hero-stat-label">ADS1299</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── OVERVIEW ──────────────────────── -->
+    <section class="section" id="overview">
+      <div class="section-header">
+        <h2><span class="section-icon">◈</span> System Overview</h2>
+        <p class="section-description">
+          End-to-end architecture from electrodes to browser visualization.
+        </p>
+      </div>
+
+      <div class="card-grid animate-on-scroll">
+        <div class="card">
+          <div class="card-icon cyan">⚡</div>
+          <h3>Analog Front-End</h3>
+          <p>4× TI ADS1299 providing 32 channels of 24-bit Sigma-Delta ADC with programmable gain (1–24×) and integrated lead-off detection.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple">⬡</div>
+          <h3>Microcontroller</h3>
+          <p>TM4C1294NCPDT ARM Cortex-M4F at 120 MHz. Interrupt-driven data acquisition with dual SPI buses, USB CDC, and UART debug.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">⊕</div>
+          <h3>Compute Module</h3>
+          <p>CM5 (Raspberry Pi–class) running a C daemon for SPI transfer and frame parsing, piped to a Python/FastAPI real-time server.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon amber">⊞</div>
+          <h3>Real-Time Streaming</h3>
+          <p>IIR-filtered EEG data (4th-order Butterworth bandpass + 60 Hz notch) broadcast over WebSocket for browser-based visualization.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ARCHITECTURE ──────────────────── -->
+    <section class="section" id="architecture">
+      <div class="section-header">
+        <h2><span class="section-icon">⬡</span> Hardware Architecture</h2>
+        <p class="section-description">
+          Pin mapping, SPI topology, and peripheral interconnections.
+        </p>
+      </div>
+
+      <div class="table-wrapper animate-on-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>MCU</strong></td><td>TM4C1294NCPDT @ 120 MHz (TI TivaC, ARM Cortex-M4F)</td></tr>
+            <tr><td><strong>AFE</strong></td><td>4× ADS1299 (8 ch each → 32 ch total, 24-bit Σ-Δ)</td></tr>
+            <tr><td><strong>ADS SPI</strong></td><td>SSI2 master, Mode 1, 4 MHz — CS pins: <code>PD2</code> <code>PN1</code> <code>PN4</code> <code>PJ1</code></td></tr>
+            <tr><td><strong>Host SPI</strong></td><td>SSI0 slave, Mode 0, CM5 clocks at ≤4 MHz</td></tr>
+            <tr><td><strong>DRDY</strong></td><td><code>PP4</code> — falling-edge ISR → <code>ADSIntHandler</code></td></tr>
+            <tr><td><strong>Host IRQ</strong></td><td><code>PA0</code> — falling-edge from CM5 → <code>RPIIntHandler</code></td></tr>
+            <tr><td><strong>Data Ready</strong></td><td><code>PA1</code> — TM4C → CM5 output, pulled LOW when frame ready</td></tr>
+            <tr><td><strong>Debug</strong></td><td>UART2 @ 115200 baud (<code>PA6</code>/<code>PA7</code>)</td></tr>
+            <tr><td><strong>USB CDC</strong></td><td>USB0 Device — receives per-ADS event bytes</td></tr>
+            <tr><td><strong>RESET</strong></td><td><code>PP3</code> / <code>PN0</code> / <code>PN3</code> / <code>PJ0</code> (active-low, per ADS)</td></tr>
+            <tr><td><strong>PWDN</strong></td><td><code>PQ4</code> / <code>PP5</code> / <code>PN2</code> / <code>PN5</code> (active-low, per ADS)</td></tr>
+            <tr><td><strong>START</strong></td><td><code>PP2</code> — global start, active-high</td></tr>
+            <tr><td><strong>Clock</strong></td><td>ADS1 generates CLK → ADS2/3/4 use external CLK</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 32px; margin-bottom: 16px;">SPI Topology</h3>
+      <div class="data-flow animate-on-scroll"><span class="highlight">CM5 (master)</span>            <span class="highlight">TM4C (slave SSI0)</span>           <span class="highlight">4× ADS1299 (slaves SSI2)</span>
+  ┌────┐  PA0 falling   ┌──────────┐    DRDY PP4    ┌────────┐
+  │    │───────────────►│RPIIntHdlr│◄───────────────│ADS1299 │×4
+  │    │  SPI0 CLK/MISO │          │  SSI2 CLK/MOSI │        │
+  │    │◄───────────────│SSI0IntHdl│───────────────►│        │
+  └────┘                └──────────┘                └────────┘
+       <span class="dim">↑ commands</span>           <span class="dim">↑ bridge</span>                <span class="dim">↑ 32 ch data</span></div>
+    </section>
+
+    <!-- ── ACQUISITION PIPELINE (BPMN) ───── -->
+    <section class="section" id="pipeline">
+      <div class="section-header">
+        <h2><span class="section-icon">▸</span> Acquisition Pipeline</h2>
+        <p class="section-description">
+          Three-layer processing architecture derived from the BPMN acquisition framework.
+        </p>
+      </div>
+
+      <!-- Start Event -->
+      <div style="text-align: center; margin-bottom: 16px;" class="animate-on-scroll">
+        <span class="pipeline-event start">● Session Start</span>
+      </div>
+
+      <div class="pipeline animate-on-scroll">
+        <!-- Physical & Analog Layer -->
+        <div class="pipeline-lane lane-physical">
+          <div class="pipeline-lane-header">
+            <div class="pipeline-lane-dot"></div>
+            <div class="pipeline-lane-title">Physical & Analog Layer</div>
+          </div>
+          <div class="pipeline-tasks">
+            <div class="pipeline-task">
+              <span class="task-icon">📐</span> Execute AC Impedance Measurement
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-task">
+              <span class="task-icon">🛡️</span> Mitigate Hardware SNR (Active DRL)
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-task">
+              <span class="task-icon">🔌</span> Route Data via Independent SPI Buses
+            </div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="pipeline-connector">
+          <div class="pipeline-connector-line"></div>
+        </div>
+
+        <!-- Deterministic Hardware Layer -->
+        <div class="pipeline-lane lane-hardware">
+          <div class="pipeline-lane-header">
+            <div class="pipeline-lane-dot"></div>
+            <div class="pipeline-lane-title">Deterministic Hardware Layer</div>
+          </div>
+          <div class="pipeline-tasks">
+            <div class="pipeline-task">
+              <span class="task-icon">⚡</span> Trigger Hardware-Level ISR
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-task">
+              <span class="task-icon">🕐</span> Inject Event Marker for Temporal Sync
+            </div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="pipeline-connector">
+          <div class="pipeline-connector-line"></div>
+        </div>
+
+        <!-- Compute & Processing Layer -->
+        <div class="pipeline-lane lane-processing">
+          <div class="pipeline-lane-header">
+            <div class="pipeline-lane-dot"></div>
+            <div class="pipeline-lane-title">Compute & Processing Layer</div>
+          </div>
+          <div class="pipeline-tasks">
+            <div class="pipeline-task">
+              <span class="task-icon">📊</span> Execute DSP (IIR Filtering & Referencing)
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-task">
+              <span class="task-icon">📡</span> Format to XDF & Stream Data
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- End Event -->
+      <div style="text-align: center; margin-top: 16px;" class="animate-on-scroll">
+        <span class="pipeline-event end">■ Session End</span>
+      </div>
+    </section>
+
+    <!-- ── OPERATIONAL MODES ─────────────── -->
+    <section class="section" id="modes">
+      <div class="section-header">
+        <h2><span class="section-icon">⚡</span> Operational Modes</h2>
+        <p class="section-description">
+          Commands sent from CM5 to TM4C via SPI slave RX FIFO.
+        </p>
+      </div>
+
+      <div class="table-wrapper animate-on-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>Mode</th>
+              <th>Description</th>
+              <th>Key Config</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>0x01</code></td>
+              <td><span class="mode-badge eeg">EEG</span></td>
+              <td>Continuous 250 SPS, normal input multiplexer</td>
+              <td>Gain 24, CHnSET = <code>0x68</code></td>
+            </tr>
+            <tr>
+              <td><code>0x02</code></td>
+              <td><span class="mode-badge stop">STOP</span></td>
+              <td>Halt any running acquisition mode</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><code>0x03</code></td>
+              <td><span class="mode-badge imp">Impedance</span></td>
+              <td>One-shot lead-off sweep (6 µA, 31.2 Hz AC)</td>
+              <td>Gain 1, LOFF = <code>0x0A</code></td>
+            </tr>
+            <tr>
+              <td><code>0x04</code></td>
+              <td><span class="mode-badge test">Test</span></td>
+              <td>Internal short-circuit noise measurement</td>
+              <td>Gain 24, CHnSET = <code>0x69</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 32px; margin-bottom: 16px;">Mode Details</h3>
+
+      <div class="card-grid animate-on-scroll">
+        <div class="card">
+          <div class="card-icon cyan">⚡</div>
+          <h3>EEG Mode</h3>
+          <p><strong>CONFIG1:</strong> ADS1 = <code>0xF6</code> (master, CLK out, 250 SPS) / ADS2-4 = <code>0xD6</code> (slave)</p>
+          <p><strong>CONFIG3:</strong> ADS1 = <code>0xEC</code> (int ref + bias buffer) / ADS2-4 = <code>0xE8</code></p>
+          <p><strong>BIAS:</strong> <code>BIAS_SENSN = 0xFF</code> on ADS1 only (all INxN → bias derivation)</p>
+        </div>
+        <div class="card">
+          <div class="card-icon amber">📐</div>
+          <h3>Impedance Mode</h3>
+          <p><strong>LOFF:</strong> <code>0x0A</code> → 6 µA, 31.2 Hz AC excitation, 95% threshold</p>
+          <p><strong>Sweep:</strong> 32 channels sequentially, 10 settling + 32 raw samples each</p>
+          <p><strong>Output:</strong> Peak-to-peak packed into <code>eeeData[112]</code></p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple">🔬</div>
+          <h3>Test Shorted Mode</h3>
+          <p><strong>CHnSET:</strong> <code>0x69</code> → Gain=24, SRB2=closed, MUX=input shorted</p>
+          <p><strong>Stream:</strong> Continuous RDATAC like EEG mode</p>
+          <p>Used for noise floor characterization.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DATA FORMAT ───────────────────── -->
+    <section class="section" id="data-format">
+      <div class="section-header">
+        <h2><span class="section-icon">▦</span> Data Frame Format</h2>
+        <p class="section-description">
+          112-byte payload per DRDY sample, structured as 4 event blocks of 28 bytes each.
+        </p>
+      </div>
+
+      <div class="table-wrapper animate-on-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Offset</th>
+              <th>Content</th>
+              <th>Size</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>0–1</code></td><td><code>[0x00][0x7E]</code></td><td>2 B</td><td>Event 0 marker</td></tr>
+            <tr><td><code>2–3</code></td><td>USB event ADS1</td><td>2 B</td><td>USB CDC event byte pair</td></tr>
+            <tr><td><code>4–27</code></td><td>CH0 – CH7</td><td>24 B</td><td>8 channels × 3 bytes (24-bit)</td></tr>
+            <tr style="background: rgba(0,212,255,0.02);"><td><code>28–29</code></td><td><code>[0x00][0x7D]</code></td><td>2 B</td><td>Event 1 marker</td></tr>
+            <tr style="background: rgba(0,212,255,0.02);"><td><code>30–31</code></td><td>USB event ADS2</td><td>2 B</td><td>USB CDC event byte pair</td></tr>
+            <tr style="background: rgba(0,212,255,0.02);"><td><code>32–55</code></td><td>CH8 – CH15</td><td>24 B</td><td>8 channels × 3 bytes (24-bit)</td></tr>
+            <tr><td><code>56–57</code></td><td><code>[0x00][0x7C]</code></td><td>2 B</td><td>Event 2 marker</td></tr>
+            <tr><td><code>58–59</code></td><td>USB event ADS3</td><td>2 B</td><td>USB CDC event byte pair</td></tr>
+            <tr><td><code>60–83</code></td><td>CH16 – CH23</td><td>24 B</td><td>8 channels × 3 bytes (24-bit)</td></tr>
+            <tr style="background: rgba(0,212,255,0.02);"><td><code>84–85</code></td><td><code>[0x00][0x7B]</code></td><td>2 B</td><td>Event 3 marker</td></tr>
+            <tr style="background: rgba(0,212,255,0.02);"><td><code>86–87</code></td><td>USB event ADS4</td><td>2 B</td><td>USB CDC event byte pair</td></tr>
+            <tr style="background: rgba(0,212,255,0.02);"><td><code>88–111</code></td><td>CH24 – CH31</td><td>24 B</td><td>8 channels × 3 bytes (24-bit)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card animate-on-scroll" style="margin-top: 20px;">
+        <h4>Frame Structure Summary</h4>
+        <p>Each event block: <code>2B marker</code> + <code>2B USB</code> + <code>24B data</code> = <strong>28 bytes</strong></p>
+        <p>Total payload: 4 × 28 = <strong>112 bytes/sample</strong></p>
+        <p>SPI buffer is 135 bytes with up to 23 bytes of variable offset. The frame parser searches for the <code>[0x00][0x7E]</code> anchor and verifies the remaining 3 markers at <code>EVENT_BLOCK</code> intervals.</p>
+      </div>
+    </section>
+
+    <!-- ── DATA PATH ─────────────────────── -->
+    <section class="section" id="data-path">
+      <div class="section-header">
+        <h2><span class="section-icon">→</span> Data Path</h2>
+        <p class="section-description">
+          Interrupt-driven flow from DRDY to WebSocket broadcast.
+        </p>
+      </div>
+
+      <div class="data-flow animate-on-scroll"><span class="highlight">DRDY falls</span> ──► <span class="highlight">ADSIntHandler ISR</span>
+                │
+                ├── CS_LOW(ADS1) → clock 27 bytes → CS_HIGH
+                ├── CS_LOW(ADS2) → clock 27 bytes → CS_HIGH
+                ├── CS_LOW(ADS3) → clock 27 bytes → CS_HIGH
+                └── CS_LOW(ADS4) → clock 27 bytes → CS_HIGH
+                │
+                ├── Inject frame markers [0x00][0x7E/7D/7C/7B]
+                ├── Inject USB event bytes from usb_buffer[]
+                ├── Pull PA1 LOW → <span class="highlight">CM5 sees data ready</span>
+                │
+<span class="highlight">CM5 clocks SSI0</span> ──► <span class="highlight">SSI0IntHandler</span>
+                     ├── PA1 HIGH (ack)
+                     └── Push eeeData[pos++] into TX FIFO
+                          │
+<span class="highlight">CM5 main.c</span>          ──► parse_frame() → payload[112]
+                          ├── Write .bin file
+                          └── CSV to stdout
+                               │
+<span class="highlight">Python main.py</span>      ──► Reader thread → hex24_to_µV
+                          ├── Accumulate BLOCK_SIZE (50) samples
+                          └── Enqueue to async filter task
+                               │
+<span class="highlight">Filter + Broadcast</span> ──► sosfilt (BP 5–50 Hz + 60 Hz notch)
+                          └── WebSocket binary broadcast</div>
+    </section>
+
+    <!-- ── FIRMWARE ──────────────────────── -->
+    <section class="section" id="firmware">
+      <div class="section-header">
+        <h2><span class="section-icon">⚙</span> Firmware — TM4C1294</h2>
+        <p class="section-description">
+          Bare-metal C firmware with interrupt-driven acquisition.
+        </p>
+      </div>
+
+      <div class="card-grid animate-on-scroll">
+        <div class="card">
+          <div class="card-icon cyan">📄</div>
+          <h3>main.c</h3>
+          <p>Application entry point, RPIIntHandler (command dispatch), SysTickIntHandler, and super-loop for impedance sweep.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple">📄</div>
+          <h3>ADS1299.c / .h</h3>
+          <p>ADS1299 driver: ADSIntHandler (DRDY ISR), SSI0IntHandler, register commands (RREG/WREG/SDATAC/RDATAC), mode functions.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">📄</div>
+          <h3>Board.c / .h</h3>
+          <p>GPIO, SPI (SSI2 master + SSI0 slave), UART debug, USB CDC, and SysTick initialization routines.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon amber">📄</div>
+          <h3>Defines_ADS1299.h</h3>
+          <p>Complete register address map and bit-field constants for the ADS1299 (CONFIG1-3, CHnSET, LOFF, BIAS, etc.).</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 32px; margin-bottom: 16px;">Key ISR Handlers</h3>
+      <div class="table-wrapper animate-on-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>ISR</th>
+              <th>Trigger</th>
+              <th>Function</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>ADSIntHandler</code></td><td>PP4 (DRDY falling)</td><td>Reads 4× ADS1299 via SSI2, fills eeeData[]</td></tr>
+            <tr><td><code>SSI0IntHandler</code></td><td>SSI0 TX FIFO</td><td>Clocks eeeData[] out to CM5</td></tr>
+            <tr><td><code>RPIIntHandler</code></td><td>PA0 (CM5 edge)</td><td>Receives 1-byte commands, dispatches modes</td></tr>
+            <tr><td><code>SysTickIntHandler</code></td><td>1 kHz tick</td><td>Startup delay counter</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── HOST DAEMON ───────────────────── -->
+    <section class="section" id="host-daemon">
+      <div class="section-header">
+        <h2><span class="section-icon">⊞</span> Host Daemon — CM5</h2>
+        <p class="section-description">
+          Linux C process that bridges the TM4C SPI data to Python via stdin/stdout.
+        </p>
+      </div>
+
+      <div class="card-grid animate-on-scroll">
+        <div class="card">
+          <div class="card-icon cyan">📄</div>
+          <h3>main.c (Raspi)</h3>
+          <p>Multi-threaded SPI acquisition daemon. AcqThread polls DRDY, transfers 135 bytes, parses frames, writes .bin and CSV to stdout. SysMonitorThread reports CPU/RAM at 1 Hz.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple">📄</div>
+          <h3>bacn_gpio.c / .h</h3>
+          <p>GPIO control via sysfs: DRDY status polling (pin 5), START pulse generation (pin 4), initialization, and cleanup.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">📄</div>
+          <h3>sys_monitor.c / .h</h3>
+          <p>Reads <code>/proc/stat</code> and <code>/proc/meminfo</code> to compute CPU and RAM usage percentages.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 32px; margin-bottom: 16px;">IPC Protocol (Python → C)</h3>
+      <div class="code-block animate-on-scroll">
+        <div class="code-block-header">
+          <span class="code-block-lang">Binary stdin pipe</span>
+          <button class="code-block-copy">Copy</button>
+        </div>
+        <pre>0x01 → Start EEG acquisition
+0x02 → Stop (any mode)
+0x03 → Start impedance measurement
+0x04 → Start internal test (ADS1299 test signal)</pre>
+      </div>
+    </section>
+
+    <!-- ── PYTHON SERVER ─────────────────── -->
+    <section class="section" id="server">
+      <div class="section-header">
+        <h2><span class="section-icon">⊕</span> Python Server — FastAPI</h2>
+        <p class="section-description">
+          Real-time EEG server with IIR filtering and WebSocket streaming.
+        </p>
+      </div>
+
+      <div class="card-grid animate-on-scroll">
+        <div class="card">
+          <div class="card-icon cyan">🧮</div>
+          <h3>Signal Processing</h3>
+          <p>4th-order Butterworth bandpass (5–50 Hz) + 60 Hz notch (Q=30) cascaded as second-order sections (SOS). Per-channel IIR state is maintained across blocks for seamless filtering.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon purple">📡</div>
+          <h3>WebSocket Streaming</h3>
+          <p>Binary EEG data on <code>/ws</code>: 4-byte block number + float32 planar data (CH0×N, CH1×N, …, CH31×N). JSON status on <code>/ws/status</code> at 1 Hz.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon green">⚙</div>
+          <h3>Architecture</h3>
+          <p><strong>Reader thread:</strong> C stdout → hex parse → µV → block accumulation.<br>
+          <strong>Filter task:</strong> async consumer — filters blocks, broadcasts binary.<br>
+          <strong>Status task:</strong> async 1 Hz — broadcasts JSON metrics.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 32px; margin-bottom: 16px;">Key Parameters</h3>
+      <div class="table-wrapper animate-on-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>FS</code></td><td>250 Hz</td><td>Sampling frequency</td></tr>
+            <tr><td><code>GAIN</code></td><td>24</td><td>PGA gain (EEG mode)</td></tr>
+            <tr><td><code>VREF</code></td><td>4.5 V</td><td>Reference voltage</td></tr>
+            <tr><td><code>BLOCK_SIZE</code></td><td>50 samples</td><td>200 ms latency blocks</td></tr>
+            <tr><td><code>LSB_UV</code></td><td>~0.022 µV</td><td>Microvolts per LSB (gain 24)</td></tr>
+            <tr><td><code>NUM_CH</code></td><td>32</td><td>Total channels</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── API REFERENCE ─────────────────── -->
+    <section class="section" id="api">
+      <div class="section-header">
+        <h2><span class="section-icon">⟁</span> API Reference</h2>
+        <p class="section-description">
+          FastAPI HTTP and WebSocket endpoints served on port 8000.
+        </p>
+      </div>
+
+      <div class="animate-on-scroll">
+        <h3 style="margin-bottom: 12px;">HTTP Endpoints</h3>
+
+        <div class="api-endpoint">
+          <span class="api-method get">GET</span>
+          <span class="api-path">/</span>
+          <span class="api-desc">Dashboard UI (Jinja2 template)</span>
+        </div>
+
+        <div class="api-endpoint">
+          <span class="api-method get">GET</span>
+          <span class="api-path">/api/status</span>
+          <span class="api-desc">Current system status (CPU, RAM, state, block_num)</span>
+        </div>
+
+        <div class="api-endpoint">
+          <span class="api-method post">POST</span>
+          <span class="api-path">/api/command</span>
+          <span class="api-desc">Send command: START_EEG, START_IMP, STOP</span>
+        </div>
+
+        <h3 style="margin-top: 28px; margin-bottom: 12px;">WebSocket Endpoints</h3>
+
+        <div class="api-endpoint">
+          <span class="api-method ws">WS</span>
+          <span class="api-path">/ws</span>
+          <span class="api-desc">Binary EEG data stream (filtered, planar float32)</span>
+        </div>
+
+        <div class="api-endpoint">
+          <span class="api-method ws">WS</span>
+          <span class="api-path">/ws/status</span>
+          <span class="api-desc">JSON status stream at 1 Hz</span>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 28px; margin-bottom: 12px;">WebSocket Binary Format (<code>/ws</code>)</h3>
+      <div class="code-block animate-on-scroll">
+        <div class="code-block-header">
+          <span class="code-block-lang">Binary Layout</span>
+          <button class="code-block-copy">Copy</button>
+        </div>
+        <pre>[4-byte uint32 block_num LE]  +  [float32 planar EEG: CH0×N, CH1×N, ..., CH31×N]  +  [float32 planar USB: EVT0×N, ..., EVT3×N]
+
+Block size N = 50 samples (200 ms at 250 SPS)
+EEG data size = 32 × 50 × 4 = 6400 bytes
+USB data size = 4 × 50 × 4 = 800 bytes
+Total message = 4 + 6400 + 800 = 7204 bytes</pre>
+      </div>
+
+      <h3 style="margin-top: 28px; margin-bottom: 12px;">WebSocket JSON Format (<code>/ws/status</code>)</h3>
+      <div class="code-block animate-on-scroll">
+        <div class="code-block-header">
+          <span class="code-block-lang">JSON</span>
+          <button class="code-block-copy">Copy</button>
+        </div>
+        <pre>{
+  "cpu":      12.3,
+  "ram":      45.6,
+  "pkt_loss": 0,
+  "state":    "EEG",
+  "block_num": 42,
+  "imp":      [1200.5, 980.3, ...]   // only present after impedance sweep
+}</pre>
+      </div>
+    </section>
+
+    <!-- ── FILE STRUCTURE ────────────────── -->
+    <section class="section" id="structure">
+      <div class="section-header">
+        <h2><span class="section-icon">⊟</span> Repository Structure</h2>
+        <p class="section-description">
+          Complete file tree with descriptions.
+        </p>
+      </div>
+
+      <div class="file-tree animate-on-scroll">
+        <div><span class="dir">MONEEG/</span></div>
+        <div class="indent"><span class="dir">MonEEE/</span> <span class="comment">── TM4C1294 Firmware (CCS Project)</span></div>
+        <div class="indent-2"><span class="file">main.c</span> <span class="comment">── Entry point, ISRs, super-loop</span></div>
+        <div class="indent-2"><span class="file">tm4c1294ncpdt_startup_ccs.c</span> <span class="comment">── Vector table</span></div>
+        <div class="indent-2"><span class="file">tm4c1294ncpdt.cmd</span> <span class="comment">── Linker command file</span></div>
+        <div class="indent-2"><span class="dir">Drivers/</span></div>
+        <div class="indent-3"><span class="file">Board.h / Board.c</span> <span class="comment">── GPIO, SPI, UART, USB, SysTick</span></div>
+        <div class="indent-3"><span class="file">usb_structs.h / .c</span> <span class="comment">── USB CDC descriptors</span></div>
+        <div class="indent-2"><span class="dir">Modules/</span></div>
+        <div class="indent-3"><span class="file">ADS1299.h / .c</span> <span class="comment">── ADS1299 driver + ISRs</span></div>
+        <div class="indent-3"><span class="file">Defines_ADS1299.h</span> <span class="comment">── Register map & constants</span></div>
+        <div class="indent-3"><span class="file">delay.h / .c</span> <span class="comment">── Busy-wait delays</span></div>
+        <div class="indent-2"><span class="file">moneee_resume.md</span> <span class="comment">── Detailed firmware reference</span></div>
+        <div class="indent">&nbsp;</div>
+        <div class="indent"><span class="dir">Raspi/</span> <span class="comment">── CM5 Host Software</span></div>
+        <div class="indent-2"><span class="file">main.c</span> <span class="comment">── SPI acquisition daemon (C, pthreads)</span></div>
+        <div class="indent-2"><span class="file">main.py</span> <span class="comment">── FastAPI real-time EEG server</span></div>
+        <div class="indent-2"><span class="dir">Drivers/</span></div>
+        <div class="indent-3"><span class="file">bacn_gpio.h / .c</span> <span class="comment">── GPIO control (DRDY, START)</span></div>
+        <div class="indent-3"><span class="file">sys_monitor.h / .c</span> <span class="comment">── CPU/RAM metrics</span></div>
+        <div class="indent-2"><span class="dir">templates/</span></div>
+        <div class="indent-3"><span class="file">index.html</span> <span class="comment">── Browser EEG dashboard</span></div>
+        <div class="indent-2"><span class="dir">static/</span> <span class="comment">── Fonts and vendor assets</span></div>
+        <div class="indent">&nbsp;</div>
+        <div class="indent"><span class="file">Moneeg.py</span> <span class="comment">── BPMN diagram generator</span></div>
+        <div class="indent"><span class="file">eeg_acquisition_framework.bpmn</span> <span class="comment">── Acquisition pipeline (BPMN 2.0)</span></div>
+        <div class="indent"><span class="dir">docs/</span> <span class="comment">── This documentation site</span></div>
+        <div class="indent"><span class="file">README.md</span> <span class="comment">── Repository overview</span></div>
+      </div>
+    </section>
+
+    <!-- ── QUICK START ───────────────────── -->
+    <section class="section" id="quickstart">
+      <div class="section-header">
+        <h2><span class="section-icon">▶</span> Quick Start</h2>
+        <p class="section-description">
+          Get MonEEG running from source.
+        </p>
+      </div>
+
+      <h3 style="margin-bottom: 12px;">1. Firmware (TM4C1294)</h3>
+      <div class="card animate-on-scroll" style="margin-bottom: 24px;">
+        <p>Open <code>MonEEE/</code> as a project in <strong>Code Composer Studio</strong> (TI CCS). Build and flash to the TM4C1294NCPDT board.</p>
+      </div>
+
+      <h3 style="margin-bottom: 12px;">2. Host Daemon (CM5 / Raspberry Pi)</h3>
+      <div class="code-block animate-on-scroll">
+        <div class="code-block-header">
+          <span class="code-block-lang">Bash</span>
+          <button class="code-block-copy">Copy</button>
+        </div>
+        <pre># Compile the C daemon
+cd Raspi
+gcc -o moneee main.c Drivers/bacn_gpio.c Drivers/sys_monitor.c -lpthread</pre>
+      </div>
+
+      <h3 style="margin-top: 24px; margin-bottom: 12px;">3. Python Server</h3>
+      <div class="code-block animate-on-scroll">
+        <div class="code-block-header">
+          <span class="code-block-lang">Bash</span>
+          <button class="code-block-copy">Copy</button>
+        </div>
+        <pre># Install dependencies
+pip install fastapi uvicorn numpy scipy jinja2
+
+# Run the server
+python main.py</pre>
+      </div>
+
+      <h3 style="margin-top: 24px; margin-bottom: 12px;">4. Access the Dashboard</h3>
+      <div class="card animate-on-scroll">
+        <p>Open a browser and navigate to <code>http://&lt;CM5-IP&gt;:8000</code>. The dashboard will connect via WebSocket and display real-time filtered EEG waveforms.</p>
+      </div>
+    </section>
+
+    <!-- ── FOOTER ────────────────────────── -->
+    <footer class="footer">
+      <p>MonEEG Documentation — Built with care for the neuroscience research community.</p>
+      <p style="margin-top: 8px;">
+        <a href="https://github.com/Pariasjulian/MONEEG" target="_blank">GitHub Repository</a>
+      </p>
+    </footer>
+
+  </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
