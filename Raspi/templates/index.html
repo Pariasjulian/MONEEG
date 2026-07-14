@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MonEEE PRO — 32-channel real-time EEG acquisition, impedance mapping, and signal visualization dashboard for the CM5/ADS1299 system.">
+    <title>MonEEE PRO - Real-Time EEG</title>
+    <link rel="stylesheet" href="/static/vendor/uPlot.min.css">
+    <script src="/static/vendor/uPlot.iife.min.js"></script>
+    <link rel="stylesheet" href="/static/fonts/inter.css">
+    <style>
+        :root {
+            --bg-dark: #080c17;
+            --bg-surface: #0B1120;
+            --bg-card: #1E293B;
+            --border: #334155;
+            --text: #E2E8F0;
+            --text-muted: #94A3B8;
+            --primary: #38BDF8;
+            --success: #10B981;
+            --danger: #F43F5E;
+            --warning: #F59E0B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), #2563EB);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+        }
+
+        .logo-icon svg {
+            width: 24px;
+            height: 24px;
+            color: #fff;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo p {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-eeg {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+        }
+
+        .btn-eeg:hover {
+            background: rgba(56, 189, 248, 0.2);
+        }
+
+        .btn-imp {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .btn-imp:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-stop {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--danger);
+        }
+
+        .btn-stop:hover {
+            background: rgba(244, 63, 94, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.3
+            }
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 24px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-label {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-value {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            min-width: 40px;
+        }
+
+        .status-bar-meter {
+            width: 80px;
+            height: 6px;
+            background: rgba(51, 65, 85, 0.6);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .status-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease, background 0.5s ease;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .dot-idle {
+            background: #64748B;
+        }
+
+        .dot-eeg {
+            background: var(--primary);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+
+        .dot-imp {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+
+        .dot-connected {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        }
+
+        .dot-disconnected {
+            background: var(--danger);
+            box-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+        }
+
+        .divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+        }
+
+        /* Controls */
+        .controls {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 10px 24px;
+            display: flex;
+            gap: 32px;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group input[type=range] {
+            width: 160px;
+            accent-color: var(--primary);
+        }
+
+        .control-group span {
+            font-size: 13px;
+            font-family: monospace;
+            min-width: 48px;
+            text-align: right;
+        }
+
+        /* Plot */
+        .plot-wrap {
+            flex: 1;
+            margin: 16px 24px;
+            background: var(--bg-surface);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            padding: 16px;
+            position: relative;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 12, 23, 0.8);
+            z-index: 10;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* uPlot dark */
+        .uplot {
+            margin: 0 auto;
+        }
+
+        .uplot .u-legend {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .uplot .u-axis-text {
+            fill: var(--text-muted) !important;
+        }
+
+        .uplot .u-axis-ticks {
+            stroke: var(--border) !important;
+        }
+
+        .uplot .u-grid {
+            stroke: var(--bg-card) !important;
+        }
+
+        /* Collapsible panels */
+        .panel {
+            margin: 16px 24px;
+            background: var(--bg-surface);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .panel-header h2 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .panel-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .panel-toggle:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .panel-body {
+            padding: 0 16px 16px;
+            transition: max-height 0.3s ease;
+            overflow: hidden;
+        }
+
+        .panel-body.collapsed {
+            max-height: 0 !important;
+            padding: 0 16px;
+        }
+
+        /* Impedance head map */
+        .imp-wrap {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+        .imp-svg-wrap {
+            flex: 0 0 auto;
+        }
+
+        .imp-legend {
+            flex: 1;
+            min-width: 280px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            margin-top: 100px;
+        }
+
+        .imp-ch {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(51, 65, 85, 0.3);
+        }
+
+        .imp-ch-label {
+            font-weight: 700;
+            min-width: 36px;
+        }
+
+        .imp-ch-val {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .electrode {
+            cursor: default;
+            stroke: #7f8c8d;
+            stroke-width: 1.2;
+            transition: fill 0.3s;
+        }
+
+        .elec-label {
+            font-size: 6px;
+            font-weight: 700;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: central;
+            fill: var(--text);
+        }
+
+        .head-outline {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 1.5;
+            pointer-events: none;
+        }
+
+        .nose-line {
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            pointer-events: none;
+        }
+
+        .imp-status {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <div>
+                <h1>MonEEE PRO</h1>
+                <p>Real-Time EEG Analytics</p>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button id="btn-eeg" class="btn btn-eeg"><span class="pulse"></span> Start EEG</button>
+            <button id="btn-imp" class="btn btn-imp">Impedance</button>
+            <button id="btn-stop" class="btn btn-stop" disabled>Stop</button>
+        </div>
+    </header>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+        <div class="status-item">
+            <div class="status-dot dot-idle" id="state-dot"></div>
+            <span class="status-label">State</span>
+            <span class="status-value" id="state-val" style="color:var(--text-muted)">IDLE</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+            <span class="status-label">CPU</span>
+            <div class="status-bar-meter">
+                <div class="status-bar-fill" id="cpu-fill" style="width:0%;background:var(--success)"></div>
+            </div>
+            <span class="status-value" id="cpu-val" style="color:var(--success)">0%</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+            <span class="status-label">RAM</span>
+            <div class="status-bar-meter">
+                <div class="status-bar-fill" id="ram-fill" style="width:0%;background:var(--primary)"></div>
+            </div>
+            <span class="status-value" id="ram-val" style="color:var(--primary)">0%</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+            <span class="status-label">Pkt Loss</span>
+            <span class="status-value" id="pktloss-val" style="color:var(--success)">0</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+            <span class="status-label">Block</span>
+            <span class="status-value" id="block-val" style="color:var(--text-muted)">#0</span>
+        </div>
+        <div class="divider"></div>
+        <div class="status-item">
+            <div class="status-dot dot-disconnected" id="ws-dot"></div>
+            <span class="status-value" id="ws-val" style="color:var(--danger)">WS Off</span>
+            <button id="btn-ws" class="btn"
+                style="padding:4px 10px;font-size:11px;background:rgba(30,41,59,0.8);color:var(--text-muted);border:1px solid var(--border);">Connect</button>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="control-group">
+            <label>Amplitude</label>
+            <input type="range" id="ctrl-gain" min="0.1" max="10" step="0.1" value="1">
+            <span id="val-gain" style="color:var(--primary)">1.0x</span>
+        </div>
+        <div class="control-group">
+            <label>Spacing</label>
+            <input type="range" id="ctrl-spacing" min="10" max="1000" step="10" value="100">
+            <span id="val-spacing" style="color:var(--success)">100µV</span>
+        </div>
+        <div class="control-group">
+            <label>Offset</label>
+            <input type="range" id="ctrl-offset" min="-2000" max="2000" step="10" value="0">
+            <span id="val-offset" style="color:var(--warning)">0µV</span>
+        </div>
+    </div>
+
+    <!-- EEG Panel (collapsible) -->
+    <div class="panel" id="eeg-panel">
+        <div class="panel-header" onclick="togglePanel('eeg')">
+            <h2>⚡ Real-Time EEG</h2>
+            <button class="panel-toggle" id="eeg-toggle">Hide</button>
+        </div>
+        <div class="panel-body" id="eeg-body">
+            <div id="plot-container"
+                style="position:relative;min-height:500px;display:flex;align-items:center;justify-content:center;">
+                <div class="loading hidden" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top:16px;font-size:14px;color:var(--primary)">Awaiting data stream...</p>
+                </div>
+            </div>
+            <div id="usb-plot-container" style="position:relative;min-height:150px;margin-top:16px;"></div>
+        </div>
+    </div>
+
+    <!-- Impedance Panel (collapsible) -->
+    <div class="panel" id="imp-panel">
+        <div class="panel-header" onclick="togglePanel('imp')">
+            <h2>🔬 Impedance Map</h2>
+            <button class="panel-toggle" id="imp-toggle">Hide</button>
+        </div>
+        <div class="panel-body" id="imp-body">
+            <div class="imp-status" id="imp-status">Press "Impedance" to measure</div>
+            <div class="imp-wrap">
+                <div class="imp-svg-wrap">
+                    <svg id="imp-svg" width="600" height="600" viewBox="0 0 430 450">
+                        <circle class="head-outline" cx="216" cy="233" r="198" />
+                        <circle class="head-outline" cx="216" cy="233" r="160" />
+                        <line class="head-outline" x1="18" y1="233" x2="414" y2="233" />
+                        <line class="head-outline" x1="216" y1="35" x2="216" y2="431" />
+                        <path class="nose-line" d="M195 35 L216 0 L236 35" />
+                        <g id="elec-container"></g>
+                    </svg>
+                </div>
+                <div class="imp-legend" id="imp-legend"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Config ──
+        const FS = 250, NUM_CH = 32, NUM_USB = 4, WIN_SEC = 5, WIN_N = FS * WIN_SEC;
+        let gain = 1.0, spacing = 100, offset = 0, lastBlockNum = 0, wsGaps = 0;
+
+        const impLayout = [
+            { l: "FP1", x: 166, y: 82 }, { l: "FP2", x: 265, y: 82 }, { l: "F7", x: 86, y: 139 }, { l: "F3", x: 151, y: 150 },
+            { l: "Fz", x: 216, y: 153 }, { l: "F4", x: 280, y: 150 }, { l: "F8", x: 345, y: 139 }, { l: "T7", x: 56, y: 234 },
+            { l: "C3", x: 136, y: 233 }, { l: "C4", x: 296, y: 233 }, { l: "T8", x: 375, y: 234 }, { l: "P3", x: 151, y: 317 },
+            { l: "PZ", x: 216, y: 314 }, { l: "P4", x: 280, y: 317 }, { l: "O1", x: 166, y: 386 }, { l: "O2", x: 265, y: 386 },
+            { l: "FC5", x: 103, y: 188 }, { l: "FC1", x: 179, y: 192 }, { l: "FC2", x: 252, y: 192 }, { l: "FC6", x: 328, y: 188 },
+            { l: "AF3", x: 169, y: 117 }, { l: "AF4", x: 263, y: 117 }, { l: "CP5", x: 103, y: 280 }, { l: "CP1", x: 179, y: 275 },
+            { l: "CP2", x: 252, y: 275 }, { l: "CP6", x: 328, y: 280 }, { l: "P7", x: 87, y: 329 }, { l: "P8", x: 345, y: 329 },
+            { l: "PO3", x: 169, y: 351 }, { l: "POZ", x: 216, y: 355 }, { l: "PO4", x: 262, y: 351 }, { l: "CZ", x: 216, y: 233 }
+        ];
+
+        // ── Data ──
+        let plotData = Array(NUM_CH + 1).fill(null).map(() => new Float32Array(WIN_N));
+        let rawData = Array(NUM_CH).fill(null).map(() => new Float32Array(WIN_N));
+        let usbData = Array(NUM_USB + 1).fill(null).map(() => new Float32Array(WIN_N));
+        for (let i = 0; i < WIN_N; i++) {
+            plotData[0][i] = (i - WIN_N) / FS;
+            usbData[0][i] = (i - WIN_N) / FS;
+        }
+
+        // ── uPlot ──
+        const series = [{ label: "Time" }];
+        for (let c = 0; c < NUM_CH; c++) {
+            const h = (c * (360 / NUM_CH)) % 360;
+            series.push({ label: impLayout[c].l, stroke: `hsl(${h},80%,60%)`, width: 1.5, spanGaps: true, value: (u, val) => val != null ? ((val - ((NUM_CH - 1 - c) * spacing + offset)) / gain).toFixed(2) + ' µV' : '--' });
+        }
+        const pc = document.getElementById('plot-container');
+        const opts = {
+            width: pc.clientWidth - 32, height: Math.max(500, pc.clientHeight - 32),
+            title: "Real-Time Filtered EEG",
+            legend: { show: false },
+            scales: { x: { time: false }, y: { range: (u, mn, mx) => [-150, (NUM_CH * spacing) + 150] } },
+            axes: [
+                { stroke: "#94A3B8", grid: { stroke: "#1E293B", width: 1 }, values: (u, s) => s.map(v => v.toFixed(1) + "s") },
+                {
+                    stroke: "#94A3B8",
+                    grid: { stroke: "#1E293B", width: 1 },
+                    splits: (u, axisIdx, scaleMin, scaleMax, foundSpace, foundIncr) => {
+                        const s = [];
+                        for (let c = 0; c < NUM_CH; c++) s.push(c * spacing + offset);
+                        return s;
+                    },
+                    values: (u, splits) => splits.map(v => {
+                        const idx = NUM_CH - 1 - Math.round((v - offset) / spacing);
+                        return (idx >= 0 && idx < NUM_CH) ? impLayout[idx].l : "";
+                    })
+                }
+            ],
+            series, cursor: { sync: { key: "eeg" } }
+        };
+        let uplot = new uPlot(opts, plotData, pc);
+
+        // ── uPlot USB ──
+        const usbSeries = [{ label: "Time" }];
+        for (let c = 0; c < NUM_USB; c++) {
+            const h = (c * (360 / NUM_USB)) % 360;
+            usbSeries.push({ label: `EV${c + 1}`, stroke: `hsl(${h},80%,60%)`, width: 1.5, spanGaps: true });
+        }
+        const puc = document.getElementById('usb-plot-container');
+        const usbOpts = {
+            width: pc.clientWidth - 32, height: 150,
+            title: "Events",
+            legend: { show: false },
+            scales: { x: { time: false }, y: { range: [-0.5, NUM_USB * 2 - 0.5] } },
+            axes: [
+                { stroke: "#94A3B8", grid: { stroke: "#1E293B", width: 1 }, values: (u, s) => s.map(v => v.toFixed(1) + "s") },
+                {
+                    stroke: "#94A3B8",
+                    grid: { stroke: "#1E293B", width: 1 },
+                    splits: (u, axisIdx, scaleMin, scaleMax, foundSpace, foundIncr) => {
+                        const s = [];
+                        for (let c = 0; c < NUM_USB; c++) s.push(c * 2 + 0.5);
+                        return s;
+                    },
+                    values: (u, splits) => splits.map(v => {
+                        const idx = Math.floor(v / 2);
+                        return (idx >= 0 && idx < NUM_USB) ? `EV${idx + 1}` : "";
+                    })
+                }
+            ],
+            series: usbSeries, cursor: { sync: { key: "eeg" } }
+        };
+        let usbPlot = new uPlot(usbOpts, usbData, puc);
+
+        function redrawPlot() {
+            for (let c = 0; c < NUM_CH; c++) {
+                const off = (NUM_CH - 1 - c) * spacing + offset;
+                for (let i = 0; i < WIN_N; i++) plotData[c + 1][i] = (rawData[c][i] * gain) + off;
+            }
+            uplot.setData(plotData);
+        }
+
+        // ── Controls ──
+        const cg = document.getElementById('ctrl-gain'), vg = document.getElementById('val-gain');
+        const cs = document.getElementById('ctrl-spacing'), vs = document.getElementById('val-spacing');
+        const co = document.getElementById('ctrl-offset'), vo = document.getElementById('val-offset');
+        cg.addEventListener('input', e => { gain = parseFloat(e.target.value); vg.textContent = gain.toFixed(1) + 'x'; redrawPlot(); });
+        cs.addEventListener('input', e => { spacing = parseInt(e.target.value); vs.textContent = spacing + 'µV'; redrawPlot(); });
+        co.addEventListener('input', e => { offset = parseInt(e.target.value); vo.textContent = offset + 'µV'; redrawPlot(); });
+        window.addEventListener('resize', () => {
+            uplot.setSize({ width: pc.clientWidth - 32, height: Math.max(500, pc.clientHeight - 32) });
+            usbPlot.setSize({ width: pc.clientWidth - 32, height: 150 });
+        });
+
+        // ── Status Bar elements ──
+        const stateDot = document.getElementById('state-dot'), stateVal = document.getElementById('state-val');
+        const cpuFill = document.getElementById('cpu-fill'), cpuVal = document.getElementById('cpu-val');
+        const ramFill = document.getElementById('ram-fill'), ramVal = document.getElementById('ram-val');
+        const pktVal = document.getElementById('pktloss-val'), blockVal = document.getElementById('block-val');
+        const wsDot = document.getElementById('ws-dot'), wsVal = document.getElementById('ws-val');
+
+        function meterColor(pct) { return pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--warning)' : 'var(--success)'; }
+
+        let commandPending = false;
+
+        function updateStatus(d) {
+            // State
+            stateVal.textContent = d.state;
+            stateDot.className = 'status-dot ' + (d.state === 'EEG' ? 'dot-eeg' : d.state === 'IMP' ? 'dot-imp' : 'dot-idle');
+            stateVal.style.color = d.state === 'EEG' ? 'var(--primary)' : d.state === 'IMP' ? 'var(--success)' : 'var(--text-muted)';
+            // CPU
+            cpuFill.style.width = Math.min(d.cpu, 100) + '%'; cpuFill.style.background = meterColor(d.cpu);
+            cpuVal.textContent = d.cpu.toFixed(1) + '%'; cpuVal.style.color = meterColor(d.cpu);
+            // RAM
+            ramFill.style.width = Math.min(d.ram, 100) + '%'; ramFill.style.background = meterColor(d.ram);
+            ramVal.textContent = d.ram.toFixed(1) + '%'; ramVal.style.color = meterColor(d.ram);
+            // Pkt loss
+            pktVal.textContent = d.pkt_loss; pktVal.style.color = d.pkt_loss > 0 ? 'var(--danger)' : 'var(--success)';
+            // Block
+            blockVal.textContent = '#' + d.block_num;
+
+            // Sync button state from server
+            if (!commandPending) {
+                if (d.state === 'IDLE') {
+                    btnEeg.disabled = false; btnImp.disabled = false; btnStop.disabled = true;
+                } else if (d.state === 'IMP') {
+                    // IMP is one-shot, no stop needed
+                    btnEeg.disabled = true; btnImp.disabled = true; btnStop.disabled = true;
+                } else {
+                    btnEeg.disabled = true; btnImp.disabled = true; btnStop.disabled = false;
+                }
+            }
+        }
+
+        // ── WebSocket: EEG data ──
+        let ws, wsStatus, manualDC = false, reconTimer;
+
+        function connectWS() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
+            manualDC = false;
+            const h = window.location.host || '127.0.0.1:8000';
+            const p = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const base = location.protocol === 'file:' ? `ws://${h}` : `${p}//${h}`;
+
+            // EEG data WS
+            ws = new WebSocket(base + '/ws'); ws.binaryType = 'arraybuffer';
+            ws.onopen = () => {
+                wsDot.className = 'status-dot dot-connected'; wsVal.textContent = 'WS On'; wsVal.style.color = 'var(--success)';
+                document.getElementById('btn-ws').textContent = 'Disconnect';
+            };
+            ws.onmessage = (ev) => {
+                document.getElementById('loading').classList.add('hidden');
+                const dv = new DataView(ev.data);
+                const blockNum = dv.getUint32(0, true);  // LE block number
+                // Detect gaps
+                if (lastBlockNum > 0 && blockNum !== lastBlockNum + 1) wsGaps += (blockNum - lastBlockNum - 1);
+                lastBlockNum = blockNum;
+
+                const buf = new Float32Array(ev.data, 4);  // skip 4-byte header
+                const nSamp = buf.length / (NUM_CH + NUM_USB);
+                if (nSamp > 0) {
+                    for (let c = 0; c < NUM_CH; c++) {
+                        rawData[c].copyWithin(0, nSamp); plotData[c + 1].copyWithin(0, nSamp);
+                        const off = (NUM_CH - 1 - c) * spacing + offset, si = c * nSamp;
+                        for (let i = 0; i < nSamp; i++) {
+                            const v = buf[si + i];
+                            rawData[c][WIN_N - nSamp + i] = v;
+                            plotData[c + 1][WIN_N - nSamp + i] = (v * gain) + off;
+                        }
+                    }
+                    uplot.setData(plotData);
+
+                    const usbOffset = NUM_CH * nSamp;
+                    for (let c = 0; c < NUM_USB; c++) {
+                        usbData[c + 1].copyWithin(0, nSamp);
+                        const si = usbOffset + c * nSamp;
+                        for (let i = 0; i < nSamp; i++) {
+                            const v = buf[si + i];
+                            usbData[c + 1][WIN_N - nSamp + i] = v !== 0 ? (c * 2) + 1 : (c * 2);
+                        }
+                    }
+                    usbPlot.setData(usbData);
+                }
+            };
+            ws.onclose = () => {
+                wsDot.className = 'status-dot dot-disconnected'; wsVal.textContent = 'WS Off'; wsVal.style.color = 'var(--danger)';
+                document.getElementById('btn-ws').textContent = 'Connect';
+                if (!manualDC) { clearTimeout(reconTimer); reconTimer = setTimeout(connectWS, 3000); }
+            };
+
+            // Status WS
+            wsStatus = new WebSocket(base + '/ws/status');
+            wsStatus.onmessage = (ev) => { try { const d = JSON.parse(ev.data); updateStatus(d); if (d.imp) updateImpedance(d.imp); } catch (e) { } };
+            wsStatus.onclose = () => { if (!manualDC) setTimeout(() => connectStatusWS(base), 3000); };
+        }
+
+        function connectStatusWS(base) {
+            try {
+                wsStatus = new WebSocket(base + '/ws/status');
+                wsStatus.onmessage = (ev) => { try { const d = JSON.parse(ev.data); updateStatus(d); if (d.imp) updateImpedance(d.imp); } catch (e) { } };
+                wsStatus.onclose = () => { if (!manualDC) setTimeout(() => connectStatusWS(base), 3000); };
+            } catch (e) { }
+        }
+
+        document.getElementById('btn-ws').addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) { manualDC = true; ws.close(); if (wsStatus) wsStatus.close(); }
+            else connectWS();
+        });
+        connectWS();
+
+        // ── API ──
+        const btnEeg = document.getElementById('btn-eeg'), btnImp = document.getElementById('btn-imp'), btnStop = document.getElementById('btn-stop');
+
+        async function sendCmd(cmd) {
+            try {
+                commandPending = true;
+                const h = window.location.host || '127.0.0.1:8000';
+                const u = location.protocol === 'file:' ? `http://${h}/api/command` : '/api/command';
+                const r = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: cmd }) });
+                if (!r.ok) throw new Error('fail');
+                setTimeout(() => commandPending = false, 1500);
+                return await r.json();
+            } catch (e) { console.error(e); commandPending = false; }
+        }
+
+        btnEeg.addEventListener('click', async () => {
+            btnEeg.disabled = true; btnImp.disabled = true; btnStop.disabled = false;
+            for (let c = 0; c < NUM_CH; c++) { rawData[c].fill(0); plotData[c + 1].fill((NUM_CH - 1 - c) * spacing + offset); }
+            uplot.setData(plotData);
+            lastBlockNum = 0; wsGaps = 0;
+            document.getElementById('loading').classList.remove('hidden');
+            await sendCmd('START_EEG');
+        });
+        btnImp.addEventListener('click', async () => {
+            btnEeg.disabled = true; btnImp.disabled = true;
+            document.getElementById('imp-status').textContent = 'Measuring impedance...';
+            await sendCmd('START_IMP');
+        });
+        btnStop.addEventListener('click', async () => {
+            btnStop.disabled = true; btnEeg.disabled = false; btnImp.disabled = false;
+            document.getElementById('loading').classList.add('hidden');
+            await sendCmd('STOP');
+        });
+
+        // ── Collapsible panels ──
+        function togglePanel(id) {
+            const body = document.getElementById(id + '-body');
+            const btn = document.getElementById(id + '-toggle');
+            body.classList.toggle('collapsed');
+            btn.textContent = body.classList.contains('collapsed') ? 'Show' : 'Hide';
+        }
+
+        // ── Impedance head map ──
+        const elecContainer = document.getElementById('elec-container');
+        const impLegend = document.getElementById('imp-legend');
+        const impCircles = [], impLegVals = [];
+
+        function impColor(ohm) {
+            const a = Math.abs(ohm);
+            if (a < 5000) return '#10B981';
+            if (a < 20000) return '#F59E0B';
+            return '#F43F5E';
+        }
+
+        impLayout.forEach((e, i) => {
+            const ns = 'http://www.w3.org/2000/svg';
+            const g = document.createElementNS(ns, 'g');
+            const c = document.createElementNS(ns, 'circle');
+            c.setAttribute('cx', e.x); c.setAttribute('cy', e.y);
+            c.setAttribute('r', '12'); c.setAttribute('class', 'electrode');
+            c.setAttribute('fill', '#334155');
+            const t = document.createElementNS(ns, 'text');
+            t.setAttribute('x', e.x); t.setAttribute('y', e.y);
+            t.setAttribute('class', 'elec-label'); t.textContent = e.l;
+            g.appendChild(c); g.appendChild(t);
+            elecContainer.appendChild(g);
+            impCircles.push(c);
+
+            const div = document.createElement('div');
+            div.className = 'imp-ch';
+            const h = (i * (360 / NUM_CH)) % 360;
+            div.innerHTML = `<span class="imp-ch-label" style="color:hsl(${h},80%,60%)">${e.l}</span><span class="imp-ch-val" id="impv-${i}">--</span>`;
+            impLegend.appendChild(div);
+            impLegVals.push(div.querySelector('.imp-ch-val'));
+        });
+
+        function updateImpedance(vals) {
+            if (!vals || vals.length < NUM_CH) return;
+            document.getElementById('imp-status').textContent = 'Last impedance sweep';
+            for (let i = 0; i < NUM_CH; i++) {
+                const v = vals[i];
+                impCircles[i].setAttribute('fill', impColor(v));
+                const label = Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + ' kΩ' : v.toFixed(0) + ' Ω';
+                impLegVals[i].textContent = label;
+                impLegVals[i].style.color = impColor(v);
+            }
+        }
+    </script>
+</body>
+
+</html>
