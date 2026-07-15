@@ -9,11 +9,7 @@
 
 > **A real-time, research-grade electroencephalography platform** built on a TM4C1294NCPDT (ARM Cortex-M4F, 120 MHz) controlling four ADS1299 analog front-ends, with a CM5 (Raspberry Pi–class) compute module for streaming, filtering, and web-based visualization.
 
-📖 **Interactive Documentation:**
-* **[Online (GitHub Pages) →](https://pariasjulian.github.io/MONEEG/docs/index.html)**
-* **[Online (HTML Preview) →](https://htmlpreview.github.io/?https://github.com/Pariasjulian/MONEEG/blob/main/docs/index.html)**
-* **[Local Server (http://localhost:8080/index.html) →](http://localhost:8080/index.html)**
-
+📖 **[Interactive Documentation →](https://htmlpreview.github.io/?https://github.com/Pariasjulian/MONEEG/blob/main/docs/index.html)**
 
 ---
 
